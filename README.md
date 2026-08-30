@@ -8,7 +8,7 @@ visibility of land features (vegetation, water bodies, urban areas) using
 spatial-domain and frequency-domain filtering techniques.
 
 ## User Interface (UI)
-![output image](image.png)
+![output image](UI.png)
 
 ## Folder Structure(Short Version)
 ```
