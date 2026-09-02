@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Satellite Image Enhancement Studio | DIP Project</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfeff',
+              100: '#cffafe',
+              400: '#22d3ee',
+              500: '#06b6d4',
+              600: '#0891b2',
+              700: '#0e7490',
+            },
+            surface: {
+              900: '#0b0f17',
+              850: '#111726',
+              800: '#1e293b',
+              700: '#334155',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for Histograms -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-surface-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="bg-surface-850/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-2.5 flex items-center justify-between shadow-xl">
+    <div class="flex items-center space-x-3">
+      <div class="h-9 w-9 rounded-lg bg-gradient-to-tr from-cyan-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+        <i data-lucide="satellite" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+          GeoEnhance Studio
+        </h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Satellite Image Enhancement & Land Analysis</p>
+      </div>
+    </div>
+
+    <!-- Quick Sample Selector & Upload -->
+    <div class="flex items-center space-x-3">
+      <div class="flex items-center bg-surface-800/80 rounded-lg p-1 border border-slate-700/60 text-xs">
+        <span class="px-2 text-slate-400 flex items-center font-medium">
+          <i data-lucide="image" class="w-3.5 h-3.5 mr-1"></i> Sample:
+        </span>
+        <select id="sampleSelect" class="bg-transparent text-cyan-300 font-medium focus:outline-none cursor-pointer pr-3">
+          <option value="" disabled selected>Loading samples...</option>
+        </select>
+      </div>
+
+      <label for="imageUpload" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-cyan-900/30 cursor-pointer transition active:scale-95">
+        <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+        <span>Upload Image</span>
+        <input type="file" id="imageUpload" accept="image/*" class="hidden">
+      </label>
+
+      <!-- Auto-apply Toggle -->
+      <div class="flex items-center space-x-1.5 bg-surface-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60 text-xs">
+        <input type="checkbox" id="autoApplyToggle" checked class="w-3.5 h-3.5 text-cyan-500 rounded bg-slate-900 border-slate-600 focus:ring-cyan-500 cursor-pointer">
+        <label for="autoApplyToggle" class="text-slate-300 text-[11px] cursor-pointer select-none">Live Auto-Apply</label>
+      </div>
+
+      <!-- Export / Download -->
+      <div class="flex items-center space-x-1.5">
+        <button id="downloadBtn" title="Download Enhanced Image" class="flex items-center space-x-1 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition active:scale-95">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Save Image</span>
+        </button>
+
+        <button id="exportReportBtn" title="Export Quantitative Report" class="flex items-center space-x-1 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition active:scale-95">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>Export Metrics</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP GRID LAYOUT -->
+  <main class="flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden max-h-[calc(100vh-61px)]">
+
+    <!-- LEFT SIDEBAR: ALGORITHM & FILTER CONTROL CENTER -->
+    <aside class="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col bg-surface-850/80 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-xl overflow-hidden">
+      <!-- Tabs header: Single Filter vs Multi-Step Pipeline -->
+      <div class="flex border-b border-slate-800 bg-surface-900/50 p-1">
+        <button id="tabSingle" class="flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 text-cyan-400 bg-surface-800 shadow-sm border border-slate-700/60 transition">
+          <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+          <span>Algorithm Studio</span>
+        </button>
+        <button id="tabPipeline" class="flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 text-slate-400 hover:text-slate-200 transition">
+          <i data-lucide="workflow" class="w-3.5 h-3.5"></i>
+          <span>Pipeline Builder</span>
+        </button>
+      </div>
+
+      <!-- SINGLE FILTER CONTROLS -->
+      <div id="singleFilterPanel" class="flex-1 flex flex-col overflow-y-auto p-3 space-y-4 custom-scrollbar">
+        <!-- 1. Category Selection -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 mr-1.5 animate-pulse"></span>
+            1. Algorithm Domain
+          </label>
+          <div id="categoryContainer" class="grid grid-cols-1 gap-1.5">
+            <!-- Dynamic categories populated by JS -->
+          </div>
+        </div>
+
+        <!-- 2. Specific Filter Selection -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+            2. Specific Filter / Method
+          </label>
+          <div id="filterContainer" class="grid grid-cols-1 gap-1.5">
+            <!-- Dynamic filters populated by JS -->
+          </div>
+          <div id="filterDescription" class="mt-2 text-[11px] text-slate-400 bg-surface-900/70 p-2.5 rounded-lg border border-slate-800 leading-relaxed italic">
+            Select a filter to inspect details.
+          </div>
+        </div>
+
+        <!-- 3. Dynamic Parameters Sliders -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
+              <span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span>
+              3. Filter Parameters
+            </label>
+            <button id="resetParamsBtn" class="text-[10px] text-slate-400 hover:text-cyan-300 flex items-center space-x-1">
+              <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+
+          <div id="parametersContainer" class="bg-surface-900/80 p-3 rounded-lg border border-slate-800/90 space-y-3">
+            <!-- Dynamic sliders injected here -->
+            <p class="text-xs text-slate-500 italic text-center py-2">No adjustable parameters for this filter.</p>
+          </div>
+        </div>
+
+        <!-- Run / Process Action Button -->
+        <div class="pt-1">
+          <button id="applyFilterBtn" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center space-x-2 transition transform active:scale-98">
+            <i data-lucide="play" class="w-4 h-4 fill-slate-950"></i>
+            <span>APPLY ENHANCEMENT</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MULTI-STAGE PIPELINE BUILDER PANEL (HIDDEN BY DEFAULT) -->
+      <div id="pipelinePanel" class="flex-1 flex flex-col overflow-y-auto p-3 space-y-4 hidden custom-scrollbar">
+        <div class="bg-surface-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-slate-300">
+          <p class="font-semibold text-cyan-400 flex items-center">
+            <i data-lucide="info" class="w-3.5 h-3.5 mr-1"></i> Multi-Stage Pipeline
+          </p>
+          Chain multiple filters sequentially (e.g. Denoise &rarr; CLAHE &rarr; Sharpening).
+        </div>
+
+        <div id="pipelineStepsList" class="space-y-2">
+          <!-- Step cards injected here -->
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <button id="addPipelineStepBtn" class="w-full py-2 px-3 bg-surface-800 hover:bg-surface-700 text-cyan-300 border border-cyan-800/40 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Add Step</span>
+          </button>
+
+          <button id="runPipelineBtn" class="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-bold text-xs rounded-lg shadow-lg shadow-indigo-500/20 flex items-center justify-center space-x-2 transition active:scale-98">
+            <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+            <span>EXECUTE PIPELINE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FOOTER STATUS -->
+      <div class="p-2.5 bg-surface-900/90 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+        <span id="systemStatus" class="flex items-center text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-ping"></span>
+          Ready
+        </span>
+        <span id="processingTimeBadge" class="font-mono text-cyan-300 bg-surface-800 px-1.5 py-0.5 rounded border border-slate-700">
+          0.0 ms
+        </span>
+      </div>
+    </aside>
+
+    <!-- CENTER & RIGHT: INTERACTIVE CANVAS VIEWPORT & ANALYTICS -->
+    <div class="col-span-12 lg:col-span-9 xl:col-span-9 flex flex-col gap-3 overflow-hidden">
+      
+      <!-- TOP CANVAS VIEWPORT -->
+      <section class="flex-1 bg-surface-850/80 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-xl flex flex-col overflow-hidden relative min-h-[380px]">
+        
+        <!-- Viewport Toolbar -->
+        <div class="px-3 py-2 bg-surface-900/80 border-b border-slate-800 flex items-center justify-between">
+          
+          <!-- View Modes -->
+          <div class="flex items-center space-x-1 bg-surface-800/90 p-0.5 rounded-lg border border-slate-700/60 text-xs">
+            <button id="viewSplitSlider" class="px-2.5 py-1 rounded text-cyan-300 bg-surface-700/80 font-semibold transition flex items-center space-x-1">
+              <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
+              <span>Split Slider</span>
+            </button>
+            <button id="viewSideBySide" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center space-x-1">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+              <span>Side by Side</span>
+            </button>
+            <button id="viewEnhancedOnly" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center space-x-1">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>Enhanced</span>
+            </button>
+            <button id="viewOriginalOnly" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center space-x-1">
+              <i data-lucide="history" class="w-3.5 h-3.5"></i>
+              <span>Original</span>
+            </button>
+          </div>
+
+          <!-- Image Meta Details -->
+          <div class="hidden sm:flex items-center space-x-3 text-[11px] text-slate-400">
+            <span id="imgDimensions" class="font-mono bg-surface-800 px-2 py-0.5 rounded border border-slate-700">0 × 0 px</span>
+            <span id="imgActiveFilter" class="font-semibold text-cyan-300">Default</span>
+          </div>
+
+          <!-- Zoom / Fit Controls -->
+          <div class="flex items-center space-x-1">
+            <button id="zoomOutBtn" class="p-1.5 bg-surface-800 hover:bg-surface-700 text-slate-300 rounded border border-slate-700" title="Zoom Out">
+              <i data-lucide="zoom-out" class="w-3.5 h-3.5"></i>
+            </button>
+            <button id="zoomResetBtn" class="px-2 py-1 bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs font-mono rounded border border-slate-700" title="Reset Zoom">
+              <span id="zoomLevelText">100%</span>
+            </button>
+            <button id="zoomInBtn" class="p-1.5 bg-surface-800 hover:bg-surface-700 text-slate-300 rounded border border-slate-700" title="Zoom In">
+              <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+            </button>
+            <button id="fullscreenBtn" class="p-1.5 bg-surface-800 hover:bg-surface-700 text-slate-300 rounded border border-slate-700" title="Toggle Fullscreen">
+              <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div id="canvasViewport" class="flex-1 relative flex items-center justify-center p-2 overflow-hidden bg-dot-grid select-none cursor-grab active:cursor-grabbing">
+          
+          <!-- Loading Spinner Overlay -->
+          <div id="loadingOverlay" class="absolute inset-0 bg-surface-900/60 backdrop-blur-xs flex flex-col items-center justify-center z-30 hidden">
+            <div class="w-10 h-10 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin"></div>
+            <span class="mt-2 text-xs font-medium text-cyan-300 tracking-wide">Processing Algorithm...</span>
+          </div>
+
+          <!-- 1. SPLIT SLIDER CONTAINER -->
+          <div id="splitSliderWrapper" class="relative max-h-full max-w-full overflow-hidden rounded-lg shadow-2xl border border-slate-700/50">
+            <!-- Enhanced Base Image -->
+            <img id="imgEnhanced" src="" alt="Enhanced Satellite Image" class="block max-h-[52vh] w-auto object-contain pointer-events-none">
+            
+            <!-- Original Image Overlay Clip -->
+            <div id="splitOriginalClip" class="absolute inset-0 overflow-hidden pointer-events-none" style="width: 50%;">
+              <img id="imgOriginal" src="" alt="Original Satellite Image" class="absolute top-0 left-0 max-h-[52vh] w-auto max-w-none object-contain">
+              <span class="absolute top-3 left-3 bg-surface-900/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 shadow-md">ORIGINAL</span>
+            </div>
+            
+            <span class="absolute top-3 right-3 bg-surface-900/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-cyan-400 border border-cyan-500/30 shadow-md">ENHANCED</span>
+
+            <!-- Divider Handle -->
+            <div id="sliderHandle" class="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-400 via-white to-emerald-400 cursor-ew-resize z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]" style="left: 50%;">
+              <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 bg-surface-900 border-2 border-cyan-400 rounded-full shadow-lg flex items-center justify-center text-cyan-400">
+                <i data-lucide="chevrons-left-right" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. SIDE-BY-SIDE CONTAINER (HIDDEN BY DEFAULT) -->
+          <div id="sideBySideWrapper" class="hidden w-full h-full grid grid-cols-2 gap-2 p-2 max-h-[52vh]">
+            <div class="relative bg-surface-900/70 rounded-lg border border-slate-800 flex flex-col items-center justify-center overflow-hidden p-1">
+              <span class="absolute top-2 left-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded z-10">ORIGINAL</span>
+              <img id="imgSideOriginal" src="" alt="Original" class="max-h-full max-w-full object-contain rounded">
+            </div>
+            <div class="relative bg-surface-900/70 rounded-lg border border-slate-800 flex flex-col items-center justify-center overflow-hidden p-1">
+              <span class="absolute top-2 left-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-[10px] font-bold px-2 py-0.5 rounded z-10">ENHANCED</span>
+              <img id="imgSideEnhanced" src="" alt="Enhanced" class="max-h-full max-w-full object-contain rounded">
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- BOTTOM ANALYTICS & METRICS DASHBOARD -->
+      <section class="h-60 bg-surface-850/80 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-xl grid grid-cols-12 gap-3 p-3 overflow-hidden">
+        
+        <!-- 1. QUANTITATIVE METRICS HUD -->
+        <div class="col-span-12 md:col-span-4 flex flex-col justify-between bg-surface-900/70 p-3 rounded-lg border border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center">
+              <i data-lucide="gauge" class="w-3.5 h-3.5 mr-1.5 text-cyan-400"></i>
+              Quality Metrics
+            </h3>
+            <span id="metricRatingBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+              Optimal
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 flex-1">
+            <!-- PSNR -->
+            <div class="bg-surface-800/60 p-2 rounded-md border border-slate-700/50 flex flex-col justify-center">
+              <span class="text-[10px] text-slate-400 font-medium">PSNR (Peak SNR)</span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span id="metricPSNR" class="text-base font-extrabold font-mono text-cyan-300">--</span>
+                <span class="text-[10px] text-slate-400">dB</span>
+              </div>
+            </div>
+
+            <!-- SSIM -->
+            <div class="bg-surface-800/60 p-2 rounded-md border border-slate-700/50 flex flex-col justify-center">
+              <span class="text-[10px] text-slate-400 font-medium">SSIM (Structure)</span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span id="metricSSIM" class="text-base font-extrabold font-mono text-emerald-300">--</span>
+                <span class="text-[10px] text-slate-400">/ 1.0</span>
+              </div>
+            </div>
+
+            <!-- MSE -->
+            <div class="bg-surface-800/60 p-2 rounded-md border border-slate-700/50 flex flex-col justify-center">
+              <span class="text-[10px] text-slate-400 font-medium">MSE (Mean Error)</span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span id="metricMSE" class="text-base font-extrabold font-mono text-amber-300">--</span>
+              </div>
+            </div>
+
+            <!-- Shannon Entropy -->
+            <div class="bg-surface-800/60 p-2 rounded-md border border-slate-700/50 flex flex-col justify-center">
+              <span class="text-[10px] text-slate-400 font-medium">Shannon Entropy</span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span id="metricEntropy" class="text-base font-extrabold font-mono text-indigo-300">--</span>
+                <span id="metricEntropyDelta" class="text-[10px] text-cyan-400 font-mono">(+0.0)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. HISTOGRAM VISUALIZER (CHART.JS) -->
+        <div class="col-span-12 md:col-span-5 flex flex-col bg-surface-900/70 p-3 rounded-lg border border-slate-800">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 mr-1.5 text-emerald-400"></i>
+              Intensity Distribution
+            </h3>
+            <!-- Channel Switcher -->
+            <div class="flex space-x-1 text-[10px]">
+              <button class="hist-chan-btn px-1.5 py-0.5 rounded bg-surface-800 text-slate-300 active-hist border border-slate-700" data-channel="gray">Gray</button>
+              <button class="hist-chan-btn px-1.5 py-0.5 rounded bg-surface-800 text-red-400 border border-slate-700" data-channel="red">R</button>
+              <button class="hist-chan-btn px-1.5 py-0.5 rounded bg-surface-800 text-emerald-400 border border-slate-700" data-channel="green">G</button>
+              <button class="hist-chan-btn px-1.5 py-0.5 rounded bg-surface-800 text-blue-400 border border-slate-700" data-channel="blue">B</button>
+            </div>
+          </div>
+          <div class="flex-1 relative min-h-[140px]">
+            <canvas id="histogramChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. FREQUENCY 2D FFT SPECTRUM OR LAND COVER STATS -->
+        <div class="col-span-12 md:col-span-3 flex flex-col bg-surface-900/70 p-3 rounded-lg border border-slate-800">
+          <!-- Dynamic Content Switcher (FFT vs Land Coverage) -->
+          <div id="rightAnalyticsHeader" class="flex items-center justify-between mb-1.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center">
+              <i data-lucide="waves" class="w-3.5 h-3.5 mr-1.5 text-purple-400"></i>
+              <span id="rightAnalyticsTitle">2D FFT Spectrum</span>
+            </h3>
+          </div>
+
+          <!-- FFT View -->
+          <div id="fftSpectrumView" class="flex-1 grid grid-cols-2 gap-1.5 items-center">
+            <div class="flex flex-col items-center">
+              <span class="text-[9px] text-slate-400 mb-0.5">Original FFT</span>
+              <img id="fftOriginalImg" src="" alt="FFT Original" class="w-20 h-20 rounded border border-slate-700 object-cover bg-black">
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="text-[9px] text-cyan-300 mb-0.5">Enhanced FFT</span>
+              <img id="fftEnhancedImg" src="" alt="FFT Enhanced" class="w-20 h-20 rounded border border-cyan-700/60 object-cover bg-black">
+            </div>
+          </div>
+
+          <!-- Land Cover Analysis View (Shown when Feature Highlight selected) -->
+          <div id="landCoverStatsView" class="flex-1 flex-col justify-around hidden space-y-1.5">
+            <div>
+              <div class="flex justify-between text-[10px] text-slate-300 font-medium mb-0.5">
+                <span class="flex items-center text-emerald-400"><i data-lucide="trees" class="w-3 h-3 mr-1"></i> Vegetation</span>
+                <span id="vegCoveragePct">0.0%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="vegBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[10px] text-slate-300 font-medium mb-0.5">
+                <span class="flex items-center text-cyan-400"><i data-lucide="droplets" class="w-3 h-3 mr-1"></i> Water Bodies</span>
+                <span id="waterCoveragePct">0.0%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="waterBar" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[10px] text-slate-300 font-medium mb-0.5">
+                <span class="flex items-center text-rose-400"><i data-lucide="building" class="w-3 h-3 mr-1"></i> Urban Areas</span>
+                <span id="urbanCoveragePct">0.0%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="urbanBar" class="bg-rose-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

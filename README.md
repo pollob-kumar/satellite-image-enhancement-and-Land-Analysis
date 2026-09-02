@@ -7,6 +7,9 @@ Enhance satellite imagery affected by noise, blur, or low contrast, and improve
 visibility of land features (vegetation, water bodies, urban areas) using
 spatial-domain and frequency-domain filtering techniques.
 
+## User Interface (UI)
+![output image](UI.png)
+
 ## Folder Structure(Short Version)
 ```
 Satellite-Image-Enhancement/
